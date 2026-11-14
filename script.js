@@ -270,7 +270,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     if (
-      API_URL.includes("NAMA-PROYEK-KAMU")
+      API_URL.includes("https://nutritracker-liard.vercel.app/api/analyze")
     ) {
       notify("Alamat API Vercel belum dipasang.");
       return;
