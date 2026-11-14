@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#10141d">
+  <title>NutriTrack - AI Calorie Tracker</title>
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+
+<div class="container">
+
+  <header class="navbar">
+    <div class="brand">
+      <span class="logo">N</span>
+      <span>NutriTrack</span>
+    </div>
+    <span class="badge">● AI FOOD TRACKER</span>
+  </header>
+
+  <!-- PROFIL -->
+  <section class="profile-card">
+    <div class="profile-header">
+      <div class="avatar" id="avatar">U</div>
+
+      <div class="profile-info">
+        <p class="eyebrow">SELAMAT DATANG</p>
+        <h1 id="displayName">Halo, Pengguna! 👋</h1>
+        <p>Kenali kandungan makananmu hari ini.</p>
+      </div>
+
+      <button class="edit-btn" id="editProfile" type="button">✎</button>
+    </div>
+
+    <div class="profile-stats">
+      <div class="stat">
+        <span>Umur</span>
+        <strong id="displayAge">-</strong>
+      </div>
+      <div class="stat">
+        <span>Tinggi Badan</span>
+        <strong id="displayHeight">-</strong>
+      </div>
+      <div class="stat">
+        <span>Berat Badan</span>
+        <strong id="displayWeight">-</strong>
+      </div>
+    </div>
+
+    <div class="goal">
+      <span>Tujuan penggunaan</span>
+      <strong id="displayGoal">Belum diatur</strong>
+    </div>
+  </section>
+
+  <!-- SCANNER -->
+  <section class="scanner-section">
+    <div class="section-title">
+      <p class="eyebrow">AI FOOD SCANNER</p>
+      <h2>Scan Makananmu</h2>
+      <p>Foto makananmu dan biarkan AI menganalisis nutrisinya.</p>
+    </div>
+
+    <div class="scanner-card">
+
+      <div class="upload-box">
+        <input
+          type="file"
+          id="foodImage"
+          accept="image/jpeg,image/png,image/webp"
+          hidden
+        >
+
+        <div id="uploadEmpty">
+          <div class="camera-icon">📷</div>
+          <h3>Masukkan Foto Makanan</h3>
+          <p>Ambil foto atau pilih gambar dari perangkatmu.</p>
+
+          <button class="primary-btn" id="uploadButton" type="button">
+            + Pilih Foto
+          </button>
+
+          <button class="secondary-btn" id="cameraButton" type="button">
+            ◎ Kamera
+          </button>
+
+          <small>JPG, PNG, WEBP · Maksimal 10 MB</small>
+        </div>
+
+        <div id="previewWrap" class="hidden">
+          <img id="previewImage" alt="Foto makanan">
+          <button id="removeImage" class="remove-btn" type="button">×</button>
+        </div>
+      </div>
+
+      <div class="food-form">
+
+        <label for="foodName">Nama Makanan (Opsional)</label>
+        <input
+          type="text"
+          id="foodName"
+          placeholder="Contoh: Nasi goreng, burger..."
+        >
+
+        <p class="hint">
+          Tidak perlu mengetahui nama makanan. AI akan mencoba
+          mengenalinya langsung dari foto.
+        </p>
+
+        <label for="portion">Jumlah Porsi</label>
+        <select id="portion">
+          <option value="0.5">½ Porsi</option>
+          <option value="1" selected>1 Porsi</option>
+          <option value="1.5">1½ Porsi</option>
+          <option value="2">2 Porsi</option>
+        </select>
+
+        <button class="primary-btn analyze-btn" id="analyzeButton" type="button">
+          ✦ Analisis dengan Gemini AI
+        </button>
+
+        <div id="loading" class="loading hidden">
+          <div class="spinner"></div>
+          <strong>Gemini sedang menganalisis...</strong>
+          <p>Mohon tunggu sebentar.</p>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- HASIL -->
+  <section class="result-card hidden" id="resultSection">
+
+    <div class="result-header">
+      <div>
+        <p class="eyebrow">HASIL AI ANALYSIS</p>
+        <h2>Hasil Nutrisi Makanan</h2>
+      </div>
+      <span class="success">✓ Selesai</span>
+    </div>
+
+    <div class="food-title">
+      <div class="food-emoji" id="foodEmoji">🍽️</div>
+      <div>
+        <h3 id="resultName">Nama makanan</h3>
+        <p id="resultPortion">1 Porsi</p>
+      </div>
+    </div>
+
+    <p id="resultDescription" class="description"></p>
+
+    <div class="calorie-box">
+      <span>Total Perkiraan Kalori</span>
+      <div>
+        <strong id="resultCalories">0</strong>
+        <span>kkal</span>
+      </div>
+    </div>
+
+    <div class="nutrient-grid">
+      <div class="nutrient">
+        <span>Protein</span>
+        <strong id="resultProtein">0 g</strong>
+      </div>
+
+      <div class="nutrient">
+        <span>Karbohidrat</span>
+        <strong id="resultCarbs">0 g</strong>
+      </div>
+
+      <div class="nutrient">
+        <span>Lemak</span>
+        <strong id="resultFat">0 g</strong>
+      </div>
+    </div>
+
+    <div class="assumptions">
+      <strong>Catatan analisis AI</strong>
+      <ul id="resultAssumptions"></ul>
+    </div>
+
+    <div class="confidence" id="resultConfidence"></div>
+
+    <p class="disclaimer">
+      Hasil ini merupakan estimasi berdasarkan gambar, bukan pengukuran
+      laboratorium. Ukuran porsi, bahan, minyak, saus, dan cara memasak
+      dapat memengaruhi nilai nutrisi sebenarnya.
+    </p>
+
+    <button class="secondary-btn full-btn" id="scanAgain" type="button">
+      ↻ Scan Makanan Lain
+    </button>
+  </section>
+
+  <footer>
+    <strong>NutriTrack</strong>
+    <p>Kenali makananmu, pahami nutrisinya.</p>
+    <small>Powered by Google Gemini AI</small>
+  </footer>
+
+</div>
+
+<!-- MODAL PROFIL -->
+<div class="modal hidden" id="profileModal">
+  <div class="modal-content">
+
+    <div class="modal-header">
+      <h2>Profil Pengguna</h2>
+      <button id="closeModal" type="button">×</button>
+    </div>
+
+    <form id="profileForm">
+
+      <label for="name">Nama</label>
+      <input type="text" id="name" placeholder="Nama kamu" required>
+
+      <label for="age">Umur</label>
+      <input type="number" id="age" min="1" max="120" placeholder="Umur">
+
+      <label for="height">Tinggi Badan (cm)</label>
+      <input type="number" id="height" min="1" max="250" placeholder="Tinggi badan">
+
+      <label for="weight">Berat Badan (kg)</label>
+      <input type="number" id="weight" min="1" max="500" placeholder="Berat badan">
+
+      <label for="goal">Tujuan Penggunaan</label>
+      <select id="goal">
+        <option value="Memahami kandungan nutrisi">Memahami kandungan nutrisi</option>
+        <option value="Membangun kebiasaan makan sehat">Membangun kebiasaan makan sehat</option>
+        <option value="Mendukung aktivitas sehari-hari">Mendukung aktivitas sehari-hari</option>
+        <option value="Mencatat makanan sesuai arahan tenaga kesehatan">Mencatat makanan sesuai arahan tenaga kesehatan</option>
+      </select>
+
+      <button class="primary-btn full-btn" type="submit">
+        Simpan Profil
+      </button>
+
+    </form>
+  </div>
+</div>
+
+<div id="toast" class="toast"></div>
+
+<script src="./script.js"></script>
+</body>
+</html>
