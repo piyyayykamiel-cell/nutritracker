@@ -1,26 +1,54 @@
 export default async function handler(req, res) {
-  const allowedOrigin =
-    process.env.FRONTEND_ORIGIN ||
+  // =====================================
+  // 1. PENGATURAN CORS
+  // =====================================
+
+  const defaultOrigin =
     "https://piyyayykamiel-cell.github.io";
 
-  res.setHeader("Access-Control-Allow-Origin", allowedOrigin);
+  const configuredOrigin = process.env.FRONTEND_ORIGIN;
+
+  // Normalisasi alamat agar garis miring di akhir
+  // atau path tambahan tidak menyebabkan salah cocok.
+  function normalizeOrigin(value) {
+    try {
+      return new URL(value).origin;
+    } catch {
+      return null;
+    }
+  }
+
+  const allowedOrigins = new Set([
+    defaultOrigin,
+    normalizeOrigin(configuredOrigin)
+  ].filter(Boolean));
+
+  const origin = req.headers.origin;
+
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
   res.setHeader("Vary", "Origin");
 
-  if (
-    req.headers.origin &&
-    req.headers.origin !== allowedOrigin
-  ) {
+  // Tolak website yang tidak dikenal.
+  if (origin && !allowedOrigins.has(origin)) {
+    console.warn("Origin ditolak:", origin);
+
     return res.status(403).json({
       error: "Website tidak diizinkan mengakses API."
     });
   }
 
+  // Izinkan alamat website yang cocok.
+  if (origin) {
+    res.setHeader("Access-Control-Allow-Origin", origin);
+  }
+
+  // Menangani permintaan pemeriksaan CORS.
   if (req.method === "OPTIONS") {
     return res.status(204).end();
   }
 
+  // API hanya menerima POST.
   if (req.method !== "POST") {
     return res.status(405).json({
       error: "Metode tidak diizinkan."
@@ -28,6 +56,10 @@ export default async function handler(req, res) {
   }
 
   try {
+    // =====================================
+    // 2. API KEY GEMINI
+    // =====================================
+
     const apiKey = process.env.GEMINI_API_KEY;
 
     if (!apiKey) {
@@ -35,6 +67,10 @@ export default async function handler(req, res) {
         error: "GEMINI_API_KEY belum dipasang di Vercel."
       });
     }
+
+    // =====================================
+    // 3. MENERIMA DATA FOTO
+    // =====================================
 
     const {
       imageBase64,
@@ -69,6 +105,10 @@ export default async function handler(req, res) {
         error: "Ukuran atau data gambar tidak valid."
       });
     }
+
+    // =====================================
+    // 4. PROMPT ANALISIS MAKANAN
+    // =====================================
 
     const prompt = `
 Kamu adalah AI analisis nutrisi makanan untuk NutriTrack.
@@ -116,6 +156,10 @@ Balas hanya dengan JSON valid:
 }
 `;
 
+    // =====================================
+    // 5. MENGIRIM FOTO KE GEMINI
+    // =====================================
+
     const geminiResponse = await fetch(
       "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent",
       {
@@ -158,6 +202,10 @@ Balas hanya dengan JSON valid:
       });
     }
 
+    // =====================================
+    // 6. MEMBACA HASIL GEMINI
+    // =====================================
+
     const responseText =
       geminiData.candidates?.[0]?.content?.parts
         ?.map(part => part.text || "")
@@ -184,6 +232,10 @@ Balas hanya dengan JSON valid:
       });
     }
 
+    // =====================================
+    // 7. VALIDASI DATA NUTRISI
+    // =====================================
+
     const fields = [
       "calories_kcal",
       "protein_g",
@@ -202,6 +254,10 @@ Balas hanya dengan JSON valid:
         });
       }
     }
+
+    // =====================================
+    // 8. MENGIRIM HASIL KE WEBSITE
+    // =====================================
 
     return res.status(200).json({
       success: true,
@@ -232,7 +288,8 @@ Balas hanya dengan JSON valid:
     console.error("NutriTrack backend error:", error);
 
     return res.status(500).json({
-      error: error.message ||
+      error:
+        error.message ||
         "Terjadi kesalahan pada server."
     });
   }
