@@ -1,17 +1,53 @@
 document.addEventListener("DOMContentLoaded", () => {
 
-  // ALAMAT API VERCEL NUTRITRACK
-  const API_URL = "https://nutritracker-liard.vercel.app/api/analyze";
+  // ALAMAT BACKEND VERCEL
+  const API_URL =
+    "https://nutritracker-liard.vercel.app/api/analyze";
 
   const $ = id => document.getElementById(id);
 
   let profile = {};
-  let imageUrl = null;
   let selectedFile = null;
+  let imageUrl = null;
+
+  // CEK ELEMEN HTML
+  const requiredElements = [
+    "foodImage",
+    "uploadButton",
+    "cameraButton",
+    "analyzeButton",
+    "previewImage",
+    "previewWrap",
+    "uploadEmpty",
+    "removeImage",
+    "foodName",
+    "portion",
+    "loading",
+    "resultSection",
+    "resultName",
+    "resultPortion",
+    "resultDescription",
+    "resultCalories",
+    "resultProtein",
+    "resultCarbs",
+    "resultFat",
+    "foodEmoji",
+    "resultAssumptions",
+    "resultConfidence"
+  ];
+
+  const missing = requiredElements.filter(id => !$(id));
+
+  if (missing.length > 0) {
+    console.error("Elemen HTML tidak ditemukan:", missing);
+    alert("Ada elemen HTML yang belum ditemukan: " + missing.join(", "));
+    return;
+  }
 
   // NOTIFIKASI
   function notify(message) {
     const toast = $("toast");
+
     if (!toast) {
       alert(message);
       return;
@@ -20,28 +56,11 @@ document.addEventListener("DOMContentLoaded", () => {
     toast.textContent = message;
     toast.classList.add("show");
 
-    clearTimeout(window.toastTimer);
-    window.toastTimer = setTimeout(() => {
+    clearTimeout(window.nutriToastTimer);
+
+    window.nutriToastTimer = setTimeout(() => {
       toast.classList.remove("show");
-    }, 3000);
-  }
-
-  // CEK ELEMEN HTML
-  const requiredElements = [
-    "foodImage", "uploadButton", "cameraButton",
-    "analyzeButton", "loading", "resultSection",
-    "foodName", "portion", "previewImage",
-    "uploadEmpty", "previewWrap", "removeImage",
-    "resultName", "resultCalories", "resultProtein",
-    "resultCarbs", "resultFat"
-  ];
-
-  const missingElements = requiredElements.filter(id => !$(id));
-
-  if (missingElements.length) {
-    console.error("Elemen HTML tidak ditemukan:", missingElements);
-    alert("Ada bagian HTML yang belum lengkap. Periksa Console.");
-    return;
+    }, 3500);
   }
 
   // PROFIL
@@ -86,8 +105,6 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function openProfile() {
-    if (!$("profileModal")) return;
-
     $("name").value = profile.name || "";
     $("age").value = profile.age || "";
     $("height").value = profile.height || "";
@@ -117,66 +134,47 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  if ($("profileForm")) {
-    $("profileForm").addEventListener("submit", event => {
-      event.preventDefault();
+  $("profileForm").addEventListener("submit", event => {
+    event.preventDefault();
 
-      const name = $("name").value.trim();
-      const age = $("age").value;
-      const height = $("height").value;
-      const weight = $("weight").value;
+    const name = $("name").value.trim();
 
-      if (!name) {
-        notify("Masukkan nama terlebih dahulu.");
-        return;
-      }
+    if (!name) {
+      notify("Silakan masukkan nama.");
+      return;
+    }
 
-      if (age && (Number(age) < 1 || Number(age) > 120)) {
-        notify("Periksa umur yang dimasukkan.");
-        return;
-      }
+    profile = {
+      name,
+      age: $("age").value,
+      height: $("height").value,
+      weight: $("weight").value,
+      goal: $("goal").value
+    };
 
-      if (height && (Number(height) < 1 || Number(height) > 250)) {
-        notify("Periksa tinggi badan.");
-        return;
-      }
+    try {
+      localStorage.setItem(
+        "nutritrack_profile",
+        JSON.stringify(profile)
+      );
+    } catch {
+      notify("Profil gagal disimpan.");
+      return;
+    }
 
-      if (weight && (Number(weight) < 1 || Number(weight) > 500)) {
-        notify("Periksa berat badan.");
-        return;
-      }
+    showProfile();
+    $("profileModal").classList.add("hidden");
 
-      profile = {
-        name,
-        age,
-        height,
-        weight,
-        goal: $("goal").value
-      };
+    notify("Profil berhasil disimpan!");
+  });
 
-      try {
-        localStorage.setItem(
-          "nutritrack_profile",
-          JSON.stringify(profile)
-        );
-      } catch {
-        notify("Profil tidak berhasil disimpan.");
-        return;
-      }
-
-      showProfile();
-      $("profileModal").classList.add("hidden");
-      notify("Profil berhasil disimpan!");
-    });
-  }
-
-  // PILIH FOTO
-  function openPicker(camera) {
+  // PILIH FOTO ATAU KAMERA
+  function openFilePicker(useCamera) {
     const input = $("foodImage");
 
     input.value = "";
 
-    if (camera) {
+    if (useCamera) {
       input.setAttribute("capture", "environment");
     } else {
       input.removeAttribute("capture");
@@ -186,27 +184,27 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   $("uploadButton").addEventListener("click", () => {
-    openPicker(false);
+    openFilePicker(false);
   });
 
   $("cameraButton").addEventListener("click", () => {
-    openPicker(true);
+    openFilePicker(true);
   });
 
-  // PREVIEW FOTO
+  // TAMPILKAN FOTO
   $("foodImage").addEventListener("change", event => {
     const file = event.target.files[0];
 
     if (!file) return;
 
-    const allowed = [
+    const allowedTypes = [
       "image/jpeg",
       "image/png",
       "image/webp"
     ];
 
-    if (!allowed.includes(file.type)) {
-      notify("Gunakan foto JPG, PNG, atau WEBP.");
+    if (!allowedTypes.includes(file.type)) {
+      notify("Format foto harus JPG, PNG, atau WEBP.");
       event.target.value = "";
       return;
     }
@@ -226,11 +224,12 @@ document.addEventListener("DOMContentLoaded", () => {
     imageUrl = URL.createObjectURL(file);
 
     $("previewImage").src = imageUrl;
+
     $("uploadEmpty").classList.add("hidden");
     $("previewWrap").classList.remove("hidden");
     $("resultSection").classList.add("hidden");
 
-    notify("Foto berhasil dipilih!");
+    notify("Foto makanan berhasil dipilih!");
   });
 
   // HAPUS FOTO
@@ -251,15 +250,15 @@ document.addEventListener("DOMContentLoaded", () => {
 
   $("removeImage").addEventListener("click", removePhoto);
 
-  // KOMPRES FOTO
+  // KOMPRES FOTO DAN UBAH KE BASE64
   async function compressImage(file) {
     const bitmap = await createImageBitmap(file);
 
-    const maxSize = 1280;
+    const maxDimension = 1280;
 
     const scale = Math.min(
       1,
-      maxSize / Math.max(bitmap.width, bitmap.height)
+      maxDimension / Math.max(bitmap.width, bitmap.height)
     );
 
     const canvas = document.createElement("canvas");
@@ -268,6 +267,11 @@ document.addEventListener("DOMContentLoaded", () => {
     canvas.height = Math.round(bitmap.height * scale);
 
     const context = canvas.getContext("2d");
+
+    if (!context) {
+      bitmap.close();
+      throw new Error("Foto tidak dapat diproses browser.");
+    }
 
     context.drawImage(
       bitmap,
@@ -280,41 +284,121 @@ document.addEventListener("DOMContentLoaded", () => {
     bitmap.close();
 
     const blob = await new Promise(resolve => {
-      canvas.toBlob(resolve, "image/jpeg", 0.82);
+      canvas.toBlob(resolve, "image/jpeg", 0.8);
     });
 
     if (!blob) {
-      throw new Error("Foto tidak dapat diproses.");
+      throw new Error("Gagal mengompres foto.");
     }
 
     const base64 = await new Promise((resolve, reject) => {
       const reader = new FileReader();
 
       reader.onload = () => {
-        resolve(reader.result.split(",")[1]);
+        const result = reader.result;
+        resolve(result.split(",")[1]);
       };
 
-      reader.onerror = () => reject(
-        new Error("Foto gagal dibaca.")
-      );
+      reader.onerror = () => {
+        reject(new Error("Gagal membaca foto."));
+      };
 
       reader.readAsDataURL(blob);
     });
 
     return {
-      base64,
+      imageBase64: base64,
       mimeType: "image/jpeg"
     };
   }
 
-  // ANALISIS AI
+  // TAMPILKAN HASIL ANALISIS
+  function showResult(food, portion) {
+    const calories = Number(food.calories_kcal) * portion;
+    const protein = Number(food.protein_g) * portion;
+    const carbs = Number(food.carbs_g) * portion;
+    const fat = Number(food.fat_g) * portion;
+
+    const values = [calories, protein, carbs, fat];
+
+    if (!values.every(value =>
+      Number.isFinite(value) && value >= 0
+    )) {
+      throw new Error("Data nutrisi dari AI tidak valid.");
+    }
+
+    $("foodEmoji").textContent = "🍽️";
+
+    $("resultName").textContent =
+      food.food_name || "Makanan terdeteksi";
+
+    $("resultPortion").textContent =
+      (food.portion_estimate || "Perkiraan porsi") +
+      " · " + portion + "x";
+
+    $("resultDescription").textContent =
+      food.description || "Estimasi nutrisi dari foto makanan.";
+
+    $("resultCalories").textContent =
+      Math.round(calories).toLocaleString("id-ID");
+
+    $("resultProtein").textContent =
+      protein.toFixed(1) + " g";
+
+    $("resultCarbs").textContent =
+      carbs.toFixed(1) + " g";
+
+    $("resultFat").textContent =
+      fat.toFixed(1) + " g";
+
+    // CATATAN AI
+    const assumptions = $("resultAssumptions");
+
+    assumptions.replaceChildren();
+
+    const items = Array.isArray(food.assumptions)
+      ? food.assumptions
+      : [];
+
+    if (items.length === 0) {
+      const li = document.createElement("li");
+      li.textContent = "Nilai nutrisi merupakan perkiraan dari gambar.";
+      assumptions.appendChild(li);
+    } else {
+      items.forEach(item => {
+        const li = document.createElement("li");
+        li.textContent = String(item);
+        assumptions.appendChild(li);
+      });
+    }
+
+    $("resultConfidence").textContent =
+      "Tingkat keyakinan AI: " +
+      (food.confidence || "Sedang");
+
+    $("resultSection").classList.remove("hidden");
+
+    $("resultSection").scrollIntoView({
+      behavior: "smooth",
+      block: "start"
+    });
+  }
+
+  // ANALISIS MAKANAN DENGAN GEMINI
   async function analyzeFood() {
     if (!selectedFile) {
-      notify("Pilih foto makanan terlebih dahulu!");
+      notify("Silakan pilih foto makanan terlebih dahulu.");
       return;
     }
 
     const button = $("analyzeButton");
+
+    const portion = Number($("portion").value);
+
+    if (!Number.isFinite(portion) || portion <= 0) {
+      notify("Jumlah porsi tidak valid.");
+      return;
+    }
 
     button.disabled = true;
     button.textContent = "Sedang menganalisis...";
@@ -331,7 +415,7 @@ document.addEventListener("DOMContentLoaded", () => {
           "Content-Type": "application/json"
         },
         body: JSON.stringify({
-          imageBase64: image.base64,
+          imageBase64: image.imageBase64,
           mimeType: image.mimeType,
           foodHint: $("foodName").value.trim()
         })
@@ -342,26 +426,34 @@ document.addEventListener("DOMContentLoaded", () => {
       try {
         data = await response.json();
       } catch {
-        throw new Error("Server memberikan respons yang tidak valid.");
+        throw new Error(
+          "Server tidak memberikan respons JSON yang valid."
+        );
       }
 
       if (!response.ok) {
         throw new Error(
-          data.error || "AI gagal menganalisis foto. Kode: " + response.status
+          data.error || "Gagal menghubungi Gemini. Kode: " +
+          response.status
         );
       }
 
-      if (!data.food) {
-        throw new Error("Hasil analisis tidak ditemukan.");
+      if (!data.success || !data.food) {
+        throw new Error(
+          data.error || "Hasil analisis tidak ditemukan."
+        );
       }
 
-      showResult(data.food);
+      showResult(data.food, portion);
+
+      notify("Analisis makanan berhasil!");
 
     } catch (error) {
       console.error("NutriTrack error:", error);
 
       notify(
-        error.message || "Gagal menghubungi server. Periksa koneksi internet."
+        error.message ||
+        "Terjadi kesalahan. Silakan coba kembali."
       );
 
     } finally {
@@ -372,118 +464,30 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  // TAMPILKAN HASIL
-  function showResult(food) {
-    const portion = Number($("portion").value);
+  $("analyzeButton").addEventListener("click", analyzeFood);
 
-    if (!Number.isFinite(portion) || portion <= 0) {
-      notify("Periksa pilihan porsi.");
-      return;
-    }
+  // SCAN FOTO LAIN
+  $("scanAgain").addEventListener("click", () => {
+    removePhoto();
 
-    const calories = Math.round(
-      Number(food.calories_kcal) * portion
-    );
+    $("foodName").value = "";
+    $("portion").value = "1";
 
-    const protein = Number(
-      (Number(food.protein_g) * portion).toFixed(1)
-    );
+    $("resultSection").classList.add("hidden");
 
-    const carbs = Number(
-      (Number(food.carbs_g) * portion).toFixed(1)
-    );
-
-    const fat = Number(
-      (Number(food.fat_g) * portion).toFixed(1)
-    );
-
-    if (
-      ![calories, protein, carbs, fat].every(Number.isFinite)
-    ) {
-      throw new Error("Data nutrisi dari AI tidak valid.");
-    }
-
-    $("foodEmoji").textContent = "🍽️";
-    $("resultName").textContent =
-      food.food_name || "Makanan terdeteksi";
-
-    $("resultPortion").textContent = portion + " Porsi";
-
-    $("resultDescription").textContent =
-      food.description || "Estimasi nutrisi berdasarkan gambar.";
-
-    $("resultCalories").textContent =
-      calories.toLocaleString("id-ID");
-
-    $("resultProtein").textContent = protein + " g";
-    $("resultCarbs").textContent = carbs + " g";
-    $("resultFat").textContent = fat + " g";
-
-    const list = $("resultAssumptions");
-
-    if (list) {
-      list.replaceChildren();
-
-      const assumptions = Array.isArray(food.assumptions)
-        ? food.assumptions
-        : [];
-
-      assumptions.forEach(item => {
-        const li = document.createElement("li");
-        li.textContent = item;
-        list.appendChild(li);
-      });
-
-      if (assumptions.length === 0) {
-        const li = document.createElement("li");
-        li.textContent = "Nilai nutrisi diperkirakan dari gambar.";
-        list.appendChild(li);
-      }
-    }
-
-    if ($("resultConfidence")) {
-      $("resultConfidence").textContent =
-        "Tingkat keyakinan AI: " +
-        (food.confidence || "Tidak diketahui");
-    }
-
-    $("resultSection").classList.remove("hidden");
-
-    $("resultSection").scrollIntoView({
-      behavior: "smooth",
-      block: "start"
+    window.scrollTo({
+      top: 0,
+      behavior: "smooth"
     });
-  }
+  });
 
-  $("analyzeButton").addEventListener(
-    "click",
-    analyzeFood
-  );
-
-  // SCAN LAGI
-  if ($("scanAgain")) {
-    $("scanAgain").addEventListener("click", () => {
-      removePhoto();
-
-      $("foodName").value = "";
-      $("portion").value = "1";
-
-      $("resultSection").classList.add("hidden");
-
-      window.scrollTo({
-        top: 0,
-        behavior: "smooth"
-      });
-    });
-  }
-
-  // MULAI
+  // MULAI WEBSITE
   showProfile();
 
   if (!profile.name) {
     openProfile();
   }
 
-  console.log("NutriTrack AI siap digunakan!");
+  console.log("NutriTrack berhasil dimuat.");
 
 });
