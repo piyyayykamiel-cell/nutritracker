@@ -1,7 +1,7 @@
 document.addEventListener("DOMContentLoaded", () => {
 
   // GANTI DENGAN ALAMAT VERCEL KAMU NANTI
-  const API_URL = "https://NAMA-PROYEK-KAMU.vercel.app/api/analyze";
+  
 
   const $ = id => document.getElementById(id);
 
