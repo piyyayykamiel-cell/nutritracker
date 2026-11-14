@@ -1,7 +1,7 @@
 document.addEventListener("DOMContentLoaded", () => {
 
-  // GANTI DENGAN ALAMAT VERCEL KAMU NANTI
-  
+  // ALAMAT API VERCEL NUTRITRACK
+  const API_URL = "https://nutritracker-liard.vercel.app/api/analyze";
 
   const $ = id => document.getElementById(id);
 
@@ -12,14 +12,36 @@ document.addEventListener("DOMContentLoaded", () => {
   // NOTIFIKASI
   function notify(message) {
     const toast = $("toast");
+    if (!toast) {
+      alert(message);
+      return;
+    }
+
     toast.textContent = message;
     toast.classList.add("show");
 
     clearTimeout(window.toastTimer);
-
     window.toastTimer = setTimeout(() => {
       toast.classList.remove("show");
     }, 3000);
+  }
+
+  // CEK ELEMEN HTML
+  const requiredElements = [
+    "foodImage", "uploadButton", "cameraButton",
+    "analyzeButton", "loading", "resultSection",
+    "foodName", "portion", "previewImage",
+    "uploadEmpty", "previewWrap", "removeImage",
+    "resultName", "resultCalories", "resultProtein",
+    "resultCarbs", "resultFat"
+  ];
+
+  const missingElements = requiredElements.filter(id => !$(id));
+
+  if (missingElements.length) {
+    console.error("Elemen HTML tidak ditemukan:", missingElements);
+    alert("Ada bagian HTML yang belum lengkap. Periksa Console.");
+    return;
   }
 
   // PROFIL
@@ -34,23 +56,38 @@ document.addEventListener("DOMContentLoaded", () => {
   function showProfile() {
     const name = profile.name || "Pengguna";
 
-    $("displayName").textContent = "Halo, " + name + "! 👋";
-    $("avatar").textContent = name.charAt(0).toUpperCase();
+    if ($("displayName")) {
+      $("displayName").textContent = "Halo, " + name + "! 👋";
+    }
 
-    $("displayAge").textContent =
-      profile.age ? profile.age + " tahun" : "-";
+    if ($("avatar")) {
+      $("avatar").textContent = name.charAt(0).toUpperCase();
+    }
 
-    $("displayHeight").textContent =
-      profile.height ? profile.height + " cm" : "-";
+    if ($("displayAge")) {
+      $("displayAge").textContent =
+        profile.age ? profile.age + " tahun" : "-";
+    }
 
-    $("displayWeight").textContent =
-      profile.weight ? profile.weight + " kg" : "-";
+    if ($("displayHeight")) {
+      $("displayHeight").textContent =
+        profile.height ? profile.height + " cm" : "-";
+    }
 
-    $("displayGoal").textContent =
-      profile.goal || "Belum diatur";
+    if ($("displayWeight")) {
+      $("displayWeight").textContent =
+        profile.weight ? profile.weight + " kg" : "-";
+    }
+
+    if ($("displayGoal")) {
+      $("displayGoal").textContent =
+        profile.goal || "Belum diatur";
+    }
   }
 
   function openProfile() {
+    if (!$("profileModal")) return;
+
     $("name").value = profile.name || "";
     $("age").value = profile.age || "";
     $("height").value = profile.height || "";
@@ -62,68 +99,76 @@ document.addEventListener("DOMContentLoaded", () => {
     $("profileModal").classList.remove("hidden");
   }
 
-  $("editProfile").addEventListener("click", openProfile);
+  if ($("editProfile")) {
+    $("editProfile").addEventListener("click", openProfile);
+  }
 
-  $("closeModal").addEventListener("click", () => {
-    $("profileModal").classList.add("hidden");
-  });
-
-  $("profileModal").addEventListener("click", event => {
-    if (event.target === $("profileModal")) {
+  if ($("closeModal")) {
+    $("closeModal").addEventListener("click", () => {
       $("profileModal").classList.add("hidden");
-    }
-  });
+    });
+  }
 
-  $("profileForm").addEventListener("submit", event => {
-    event.preventDefault();
+  if ($("profileModal")) {
+    $("profileModal").addEventListener("click", event => {
+      if (event.target === $("profileModal")) {
+        $("profileModal").classList.add("hidden");
+      }
+    });
+  }
 
-    const name = $("name").value.trim();
-    const age = $("age").value;
-    const height = $("height").value;
-    const weight = $("weight").value;
+  if ($("profileForm")) {
+    $("profileForm").addEventListener("submit", event => {
+      event.preventDefault();
 
-    if (!name) {
-      notify("Masukkan nama terlebih dahulu.");
-      return;
-    }
+      const name = $("name").value.trim();
+      const age = $("age").value;
+      const height = $("height").value;
+      const weight = $("weight").value;
 
-    if (age && (Number(age) < 1 || Number(age) > 120)) {
-      notify("Periksa umur yang dimasukkan.");
-      return;
-    }
+      if (!name) {
+        notify("Masukkan nama terlebih dahulu.");
+        return;
+      }
 
-    if (height && (Number(height) < 1 || Number(height) > 250)) {
-      notify("Periksa tinggi badan.");
-      return;
-    }
+      if (age && (Number(age) < 1 || Number(age) > 120)) {
+        notify("Periksa umur yang dimasukkan.");
+        return;
+      }
 
-    if (weight && (Number(weight) < 1 || Number(weight) > 500)) {
-      notify("Periksa berat badan.");
-      return;
-    }
+      if (height && (Number(height) < 1 || Number(height) > 250)) {
+        notify("Periksa tinggi badan.");
+        return;
+      }
 
-    profile = {
-      name,
-      age,
-      height,
-      weight,
-      goal: $("goal").value
-    };
+      if (weight && (Number(weight) < 1 || Number(weight) > 500)) {
+        notify("Periksa berat badan.");
+        return;
+      }
 
-    try {
-      localStorage.setItem(
-        "nutritrack_profile",
-        JSON.stringify(profile)
-      );
-    } catch {
-      notify("Profil tidak berhasil disimpan.");
-      return;
-    }
+      profile = {
+        name,
+        age,
+        height,
+        weight,
+        goal: $("goal").value
+      };
 
-    showProfile();
-    $("profileModal").classList.add("hidden");
-    notify("Profil berhasil disimpan!");
-  });
+      try {
+        localStorage.setItem(
+          "nutritrack_profile",
+          JSON.stringify(profile)
+        );
+      } catch {
+        notify("Profil tidak berhasil disimpan.");
+        return;
+      }
+
+      showProfile();
+      $("profileModal").classList.add("hidden");
+      notify("Profil berhasil disimpan!");
+    });
+  }
 
   // PILIH FOTO
   function openPicker(camera) {
@@ -181,10 +226,8 @@ document.addEventListener("DOMContentLoaded", () => {
     imageUrl = URL.createObjectURL(file);
 
     $("previewImage").src = imageUrl;
-
     $("uploadEmpty").classList.add("hidden");
     $("previewWrap").classList.remove("hidden");
-
     $("resultSection").classList.add("hidden");
 
     notify("Foto berhasil dipilih!");
@@ -208,7 +251,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   $("removeImage").addEventListener("click", removePhoto);
 
-  // KOMPRES FOTO AGAR LEBIH RINGAN
+  // KOMPRES FOTO
   async function compressImage(file) {
     const bitmap = await createImageBitmap(file);
 
@@ -248,11 +291,13 @@ document.addEventListener("DOMContentLoaded", () => {
       const reader = new FileReader();
 
       reader.onload = () => {
-        const result = reader.result;
-        resolve(result.split(",")[1]);
+        resolve(reader.result.split(",")[1]);
       };
 
-      reader.onerror = reject;
+      reader.onerror = () => reject(
+        new Error("Foto gagal dibaca.")
+      );
+
       reader.readAsDataURL(blob);
     });
 
@@ -266,13 +311,6 @@ document.addEventListener("DOMContentLoaded", () => {
   async function analyzeFood() {
     if (!selectedFile) {
       notify("Pilih foto makanan terlebih dahulu!");
-      return;
-    }
-
-    if (
-      API_URL.includes("https://nutritracker-liard.vercel.app/api/analyze")
-    ) {
-      notify("Alamat API Vercel belum dipasang.");
       return;
     }
 
@@ -299,16 +337,22 @@ document.addEventListener("DOMContentLoaded", () => {
         })
       });
 
-      const data = await response.json();
+      let data;
+
+      try {
+        data = await response.json();
+      } catch {
+        throw new Error("Server memberikan respons yang tidak valid.");
+      }
 
       if (!response.ok) {
         throw new Error(
-          data.error || "AI gagal menganalisis foto."
+          data.error || "AI gagal menganalisis foto. Kode: " + response.status
         );
       }
 
       if (!data.food) {
-        throw new Error("Hasil analisis tidak valid.");
+        throw new Error("Hasil analisis tidak ditemukan.");
       }
 
       showResult(data.food);
@@ -316,7 +360,9 @@ document.addEventListener("DOMContentLoaded", () => {
     } catch (error) {
       console.error("NutriTrack error:", error);
 
-      notify(error.message || "Terjadi kesalahan saat analisis.");
+      notify(
+        error.message || "Gagal menghubungi server. Periksa koneksi internet."
+      );
 
     } finally {
       button.disabled = false;
@@ -329,6 +375,11 @@ document.addEventListener("DOMContentLoaded", () => {
   // TAMPILKAN HASIL
   function showResult(food) {
     const portion = Number($("portion").value);
+
+    if (!Number.isFinite(portion) || portion <= 0) {
+      notify("Periksa pilihan porsi.");
+      return;
+    }
 
     const calories = Math.round(
       Number(food.calories_kcal) * portion
@@ -346,16 +397,20 @@ document.addEventListener("DOMContentLoaded", () => {
       (Number(food.fat_g) * portion).toFixed(1)
     );
 
-    $("foodEmoji").textContent = "🍽️";
+    if (
+      ![calories, protein, carbs, fat].every(Number.isFinite)
+    ) {
+      throw new Error("Data nutrisi dari AI tidak valid.");
+    }
 
+    $("foodEmoji").textContent = "🍽️";
     $("resultName").textContent =
       food.food_name || "Makanan terdeteksi";
 
-    $("resultPortion").textContent =
-      portion + " Porsi";
+    $("resultPortion").textContent = portion + " Porsi";
 
     $("resultDescription").textContent =
-      food.description || "Analisis berdasarkan gambar makanan.";
+      food.description || "Estimasi nutrisi berdasarkan gambar.";
 
     $("resultCalories").textContent =
       calories.toLocaleString("id-ID");
@@ -365,27 +420,32 @@ document.addEventListener("DOMContentLoaded", () => {
     $("resultFat").textContent = fat + " g";
 
     const list = $("resultAssumptions");
-    list.replaceChildren();
 
-    const assumptions = Array.isArray(food.assumptions)
-      ? food.assumptions
-      : [];
+    if (list) {
+      list.replaceChildren();
 
-    assumptions.forEach(item => {
-      const li = document.createElement("li");
-      li.textContent = item;
-      list.appendChild(li);
-    });
+      const assumptions = Array.isArray(food.assumptions)
+        ? food.assumptions
+        : [];
 
-    if (assumptions.length === 0) {
-      const li = document.createElement("li");
-      li.textContent = "Nilai nutrisi diperkirakan dari gambar.";
-      list.appendChild(li);
+      assumptions.forEach(item => {
+        const li = document.createElement("li");
+        li.textContent = item;
+        list.appendChild(li);
+      });
+
+      if (assumptions.length === 0) {
+        const li = document.createElement("li");
+        li.textContent = "Nilai nutrisi diperkirakan dari gambar.";
+        list.appendChild(li);
+      }
     }
 
-    $("resultConfidence").textContent =
-      "Tingkat keyakinan AI: " +
-      (food.confidence || "Tidak diketahui");
+    if ($("resultConfidence")) {
+      $("resultConfidence").textContent =
+        "Tingkat keyakinan AI: " +
+        (food.confidence || "Tidak diketahui");
+    }
 
     $("resultSection").classList.remove("hidden");
 
@@ -401,19 +461,21 @@ document.addEventListener("DOMContentLoaded", () => {
   );
 
   // SCAN LAGI
-  $("scanAgain").addEventListener("click", () => {
-    removePhoto();
+  if ($("scanAgain")) {
+    $("scanAgain").addEventListener("click", () => {
+      removePhoto();
 
-    $("foodName").value = "";
-    $("portion").value = "1";
+      $("foodName").value = "";
+      $("portion").value = "1";
 
-    $("resultSection").classList.add("hidden");
+      $("resultSection").classList.add("hidden");
 
-    window.scrollTo({
-      top: 0,
-      behavior: "smooth"
+      window.scrollTo({
+        top: 0,
+        behavior: "smooth"
+      });
     });
-  });
+  }
 
   // MULAI
   showProfile();
